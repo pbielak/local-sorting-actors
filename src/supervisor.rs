@@ -3,7 +3,6 @@ Define the supervisor actor
 */
 use actix::prelude::*;
 use futures::Future;
-use futures::future::{join_all};
 
 use crate::msgs;
 use crate::sorting_actor;
@@ -16,25 +15,18 @@ pub struct SupervisorActor {
     num_chunks: usize,
 
     sorting_actors: Vec<Addr<sorting_actor::SortingActor>>,
-
-    remaining_chunks: usize,
-    sorted_values: Vec<i64>,
 }
 
 impl SupervisorActor {
     pub fn new(id: &str, num_actors: usize, num_chunks: usize) -> SupervisorActor {
         let id = String::from(id);
         let sorting_actors = vec![];
-        let remaining_chunks = num_chunks;
-        let sorted_values = vec![];
 
         SupervisorActor {
             id,
             num_actors,
             num_chunks,
             sorting_actors,
-            remaining_chunks,
-            sorted_values,
         }
     }
 
@@ -66,62 +58,33 @@ impl Handler<msgs::SortingRequest> for SupervisorActor {
     type Result = msgs::SortingResponse;
 
 
-    fn handle(&mut self, msg: msgs::SortingRequest, ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: msgs::SortingRequest, _: &mut Context<Self>) -> Self::Result {
         let in_vec = msg.values;
 
         println!("[SupervisorActor] Got sorting request: Vec[{}]", in_vec.len());
 
         let chunks = split_vec(&in_vec, self.num_chunks);
 
-        self.sorting_actors
+        let tasks: Vec<Request<sorting_actor::SortingActor, msgs::SortingRequest>> = self.sorting_actors
             .iter()
             .cycle()
             .take(chunks.len())
             .zip(chunks)
-            .for_each(|ac| {
-                let (actor_addr, chunk) = ac;
+            .map(|ac| {
+                let (actor, chunk) = ac;
+                actor.send(msgs::SortingRequest::new(chunk.to_vec()))
+            })
+            .collect();
 
-                let msg = msgs::SortingRequest::new(chunk.to_vec(), Some(ctx.address().clone()));
+        let x = tasks.into_iter().fold(msgs::SortingResponse::new(vec![], 0), |acc, task| {
+            let res: msgs::SortingResponse = task.wait().unwrap();
 
-                let _ = ctx.spawn(actor_addr.send(msg)
-                    .map_err(|_| ())
-                    .and_then(|_| {
-                        println!("Supervisor: got response");
-                        Ok(())
-                    })
-                    .into_actor(self)
-                );
-            });
+            msgs::SortingResponse::new(merge(&acc.values, &res.values), acc.duration + res.duration)
+        });
 
-        while self.remaining_chunks > 0 {
-            std::thread::sleep_ms(1000);
-            println!("There are still {} remaining chunks!", self.remaining_chunks);
-        }
-
-        msgs::SortingResponse::new(self.sorted_values.clone(), 0) // TODO: duration!
+        x
     }
 }
-
-
-impl Handler<msgs::SortingResponse> for SupervisorActor {
-    type Result = Result<(), std::io::Error>;
-
-    fn handle(&mut self, msg: msgs::SortingResponse, _: &mut Context<Self>) -> Self::Result {
-        println!("[SupervisorActor] Got SortingResponse!");
-
-        if self.sorted_values.is_empty() {
-            self.sorted_values = msg.values;
-        }
-        else {
-            self.sorted_values = merge(&self.sorted_values, &msg.values);
-        }
-
-        self.remaining_chunks -= 1;
-
-        Ok(())
-    }
-}
-
 
 fn split_vec<T: Clone>(v: &Vec<T>, num_chunks: usize) -> Vec<Vec<T>> {
     let mut result: Vec<Vec<T>> = Vec::new();

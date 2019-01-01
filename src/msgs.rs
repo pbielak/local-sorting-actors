@@ -4,13 +4,10 @@ Define messages used in the system
 use actix::dev::{MessageResponse, ResponseChannel};
 use actix::prelude::*;
 
-use crate::supervisor;
-
 
 #[derive(Debug)]
 pub struct SortingRequest {
     pub values: Vec<i64>,
-    pub from: Option<Addr<supervisor::SupervisorActor>>
 }
 
 impl Message for SortingRequest {
@@ -19,10 +16,9 @@ impl Message for SortingRequest {
 
 
 impl SortingRequest {
-    pub fn new(values: Vec<i64>, from: Option<Addr<supervisor::SupervisorActor>>) -> SortingRequest {
+    pub fn new(values: Vec<i64>) -> SortingRequest {
         SortingRequest{
-            values,
-            from
+            values
         }
     }
 }
@@ -41,10 +37,6 @@ impl SortingResponse {
             duration
         }
     }
-}
-
-impl Message for SortingResponse {
-    type Result = Result<(), std::io::Error>;
 }
 
 impl<A, M> MessageResponse<A, M> for SortingResponse
