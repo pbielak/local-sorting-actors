@@ -18,6 +18,12 @@ impl SortingActor {
             id: String::from(id)
         }
     }
+
+    pub fn sort_vec<T: Clone + Ord>(&self, v: Vec<T>) -> Vec<T> {
+        let mut vals = v.clone();
+        vals.sort();
+        vals
+    }
 }
 
 impl Actor for SortingActor {
@@ -36,19 +42,11 @@ impl Handler<msgs::SortingRequest> for SortingActor {
     type Result = msgs::SortingResponse;
 
 
-    fn handle(&mut self, msg: msgs::SortingRequest, _: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: msgs::SortingRequest, _: &mut Self::Context) -> Self::Result {
         println!("[SortingActor][{}] Got sorting request: Vec[{}]", self.id, msg.values.len());
 
-        let (vals, duration) = util::measure_time(&sort_vec, msg.values);
+        let (vals, duration) = util::measure_time(&|vals| self.sort_vec(vals), msg.values);
 
         msgs::SortingResponse::new(vals, duration)
     }
 }
-
-fn sort_vec<T: Clone + Ord>(v: Vec<T>) -> Vec<T> {
-    let mut vals = v.clone();
-    vals.sort();
-    vals
-}
-
-

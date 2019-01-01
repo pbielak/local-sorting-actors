@@ -6,6 +6,7 @@ use futures::Future;
 
 use crate::msgs;
 use crate::sorting_actor;
+use crate::util;
 
 
 #[derive(Debug)]
@@ -39,6 +40,25 @@ impl SupervisorActor {
             );
         }
     }
+
+    pub fn sort_values(&self, numbers: Vec<i64>) -> Vec<i64> {
+        type Tasks = Vec<Request<sorting_actor::SortingActor, msgs::SortingRequest>>;
+
+        let chunks = split_vec(&numbers, self.num_chunks);
+        let actor_pool = self.sorting_actors.clone();
+
+        let tasks: Tasks = round_robin_assign(actor_pool, chunks).into_iter().map(|ac| {
+            let (actor, chunk) = ac;
+            actor.send(msgs::SortingRequest::new(chunk.to_vec()))
+        }).collect();
+
+        let sorted_values = tasks.into_iter().fold(vec![], |acc, task| {
+            let res: msgs::SortingResponse = task.wait().unwrap();
+            merge(&acc, &res.values)
+        });
+
+        sorted_values
+    }
 }
 
 impl Actor for SupervisorActor {
@@ -63,26 +83,9 @@ impl Handler<msgs::SortingRequest> for SupervisorActor {
 
         println!("[SupervisorActor] Got sorting request: Vec[{}]", in_vec.len());
 
-        let chunks = split_vec(&in_vec, self.num_chunks);
+        let (sorted_values, duration) = util::measure_time(&|vals| self.sort_values(vals), in_vec);
 
-        let tasks: Vec<Request<sorting_actor::SortingActor, msgs::SortingRequest>> = self.sorting_actors
-            .iter()
-            .cycle()
-            .take(chunks.len())
-            .zip(chunks)
-            .map(|ac| {
-                let (actor, chunk) = ac;
-                actor.send(msgs::SortingRequest::new(chunk.to_vec()))
-            })
-            .collect();
-
-        let x = tasks.into_iter().fold(msgs::SortingResponse::new(vec![], 0), |acc, task| {
-            let res: msgs::SortingResponse = task.wait().unwrap();
-
-            msgs::SortingResponse::new(merge(&acc.values, &res.values), acc.duration + res.duration)
-        });
-
-        x
+        msgs::SortingResponse::new(sorted_values, duration)
     }
 }
 
@@ -99,6 +102,16 @@ fn split_vec<T: Clone>(v: &Vec<T>, num_chunks: usize) -> Vec<Vec<T>> {
     }
 
     result
+}
+
+
+fn round_robin_assign<A: Clone, V>(actors: Vec<A>, chunks: Vec<V>) -> Vec<(A, V)> {
+    actors
+        .into_iter()
+        .cycle()
+        .take(chunks.len())
+        .zip(chunks)
+        .collect()
 }
 
 
