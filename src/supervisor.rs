@@ -93,30 +93,6 @@ impl Handler<msgs::SortingRequest> for SupervisorActor {
                 );
             });
 
-//        let responses = assign_chunks(ctx.address(), &self.sorting_actors, &chunks);
-//
-//        for res in responses {
-//            println!("Waiting for response!");
-//            Arbiter::spawn(
-//                res
-//                    .map(|_| {
-//                        println!("Finished sorting!");
-//                    })
-//                    .map_err(|_| {
-//                        println!("Error occurred when waiting for sorting response!");
-//                    })
-//            );
-//        }
-
-//        let _ = ctx.spawn(self.sorting_actors[0].send(msgs::SortingRequest::new(vec![3,2,1], Some(ctx.address().clone())))
-//            .map_err(|_| ())
-//            .and_then(|_| {
-//                println!("Supervisor: got response");
-//                Ok(())
-//            })
-//            .into_actor(self)
-//        );
-
         while self.remaining_chunks > 0 {
             std::thread::sleep_ms(1000);
             println!("There are still {} remaining chunks!", self.remaining_chunks);
@@ -161,36 +137,6 @@ fn split_vec<T: Clone>(v: &Vec<T>, num_chunks: usize) -> Vec<Vec<T>> {
 
     result
 }
-
-
-//fn assign_chunks(
-//    supervisor: &mut SupervisorActor,
-//    ctx: &mut SupervisorActor::Context,
-////    supervisor_addr: Addr<SupervisorActor>,
-//                 actors: &Vec<Addr<sorting_actor::SortingActor>>,
-//                 chunks: &Vec<Vec<i64>>) -> Vec<Request<sorting_actor::SortingActor, msgs::SortingRequest>> {
-//    actors
-//        .iter()
-//        .cycle()
-//        .take(chunks.len())
-//        .zip(chunks)
-//        .map(|ac| {
-//            let (actor_addr, chunk) = ac;
-//
-//            let msg = msgs::SortingRequest::new(chunk.to_vec(), Some(ctx.address().clone()));
-//
-//            let _ = ctx.spawn(actor_addr.send(msg)
-//                .map_err(|_| ())
-//                .and_then(|_| {
-//                    println!("Supervisor: got response");
-//                    Ok(())
-//                })
-//                .into_actor(supervisor)
-//            );
-////            actor_addr.send(msgs::SortingRequest::new(chunk.to_vec(), Some(supervisor_addr.clone())))
-//        })
-//        .collect()
-//}
 
 
 fn merge(v1: &Vec<i64>, v2: &Vec<i64>) -> Vec<i64> {

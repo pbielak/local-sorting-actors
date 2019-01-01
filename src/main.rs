@@ -4,7 +4,7 @@ extern crate rand;
 extern crate time;
 
 use actix::prelude::*;
-use futures::Future;
+use futures::{future, Future};
 
 
 mod msgs;
@@ -56,15 +56,15 @@ fn main() {
         let res = supervisor.send(sort_req);
 
         Arbiter::spawn(
-            res
-                .map(|r| {
-                    println!("Result: Sorted(Vec[{}], Duration: {} (ms)]", r.values.len(), r.duration);
-                    System::current().stop();
-                })
-                .map_err(|_| {
-                    println!("Error occurred!");
-                    System::current().stop();
-                })
+            res.then(|r| {
+                match r {
+                    Ok(r) => println!("Result: Sorted(Vec[{}], Duration: {} (ms)]", r.values.len(), r.duration),
+                    _ => println!("Error occurred!")
+                }
+
+                System::current().stop();
+                future::result(Ok(()))
+            })
         );
     });
 }
