@@ -7,5 +7,7 @@ edition = "2018"
 [dependencies]
 actix = "0.7"
 futures = "0.1"
+env_logger = "0.6"
+log = "0.4"
 rand = "0.6"
 time = "0.1"

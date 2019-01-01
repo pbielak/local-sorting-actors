@@ -4,9 +4,9 @@ Define the supervisor actor
 use actix::prelude::*;
 use futures::Future;
 
-use crate::msgs;
-use crate::sorting_actor;
-use crate::util;
+use super::messages;
+use super::sorting_actor;
+use super::util;
 
 
 #[derive(Debug)]
@@ -42,18 +42,18 @@ impl SupervisorActor {
     }
 
     pub fn sort_values(&self, numbers: Vec<i64>) -> Vec<i64> {
-        type Tasks = Vec<Request<sorting_actor::SortingActor, msgs::SortingRequest>>;
+        type Tasks = Vec<Request<sorting_actor::SortingActor, messages::SortingRequest>>;
 
         let chunks = split_vec(&numbers, self.num_chunks);
         let actor_pool = self.sorting_actors.clone();
 
         let tasks: Tasks = round_robin_assign(actor_pool, chunks).into_iter().map(|ac| {
             let (actor, chunk) = ac;
-            actor.send(msgs::SortingRequest::new(chunk.to_vec()))
+            actor.send(messages::SortingRequest::new(chunk.to_vec()))
         }).collect();
 
         let sorted_values = tasks.into_iter().fold(vec![], |acc, task| {
-            let res: msgs::SortingResponse = task.wait().unwrap();
+            let res: messages::SortingResponse = task.wait().unwrap();
             merge(&acc, &res.values)
         });
 
@@ -65,27 +65,27 @@ impl Actor for SupervisorActor {
     type Context = Context<Self>;
 
     fn started(&mut self, _: &mut Self::Context) {
-        println!("[{}] SupervisorActor ~ START", self.id);
+        debug!("[{}] SupervisorActor ~ START", self.id);
         self.spawn_sorting_actors();
     }
 
     fn stopped(&mut self, _: &mut Self::Context) {
-        println!("[{}] SupervisorActor ~ STOP", self.id);
+        debug!("[{}] SupervisorActor ~ STOP", self.id);
     }
 }
 
-impl Handler<msgs::SortingRequest> for SupervisorActor {
-    type Result = msgs::SortingResponse;
+impl Handler<messages::SortingRequest> for SupervisorActor {
+    type Result = messages::SortingResponse;
 
 
-    fn handle(&mut self, msg: msgs::SortingRequest, _: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: messages::SortingRequest, _: &mut Context<Self>) -> Self::Result {
         let in_vec = msg.values;
 
-        println!("[SupervisorActor] Got sorting request: Vec[{}]", in_vec.len());
+        debug!("[SupervisorActor] Got sorting request: Vec[{}]", in_vec.len());
 
         let (sorted_values, duration) = util::measure_time(&|vals| self.sort_values(vals), in_vec);
 
-        msgs::SortingResponse::new(sorted_values, duration)
+        messages::SortingResponse::new(sorted_values, duration)
     }
 }
 

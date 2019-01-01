@@ -3,8 +3,9 @@ Define the sorting actor
 */
 use actix::prelude::*;
 
-use crate::msgs;
-use crate::util;
+use super::messages;
+use super::util;
+
 
 
 #[derive(Debug)]
@@ -30,23 +31,23 @@ impl Actor for SortingActor {
     type Context = Context<Self>;
 
     fn started(&mut self, _: &mut Self::Context) {
-        println!("[{}] SortingActor ~ START", self.id)
+        debug!("[{}] SortingActor ~ START", self.id)
     }
 
     fn stopped(&mut self, _: &mut Self::Context) {
-        println!("[{}] SortingActor ~ STOP", self.id)
+        debug!("[{}] SortingActor ~ STOP", self.id)
     }
 }
 
-impl Handler<msgs::SortingRequest> for SortingActor {
-    type Result = msgs::SortingResponse;
+impl Handler<messages::SortingRequest> for SortingActor {
+    type Result = messages::SortingResponse;
 
 
-    fn handle(&mut self, msg: msgs::SortingRequest, _: &mut Self::Context) -> Self::Result {
-        println!("[SortingActor][{}] Got sorting request: Vec[{}]", self.id, msg.values.len());
+    fn handle(&mut self, msg: messages::SortingRequest, _: &mut Self::Context) -> Self::Result {
+        debug!("[SortingActor][{}] Got sorting request: Vec[{}]", self.id, msg.values.len());
 
         let (vals, duration) = util::measure_time(&|vals| self.sort_vec(vals), msg.values);
 
-        msgs::SortingResponse::new(vals, duration)
+        messages::SortingResponse::new(vals, duration)
     }
 }
