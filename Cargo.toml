@@ -1,7 +1,7 @@
 [package]
-name = "first"
+name = "local-sorting-actors"
 version = "0.1.0"
-authors = ["Piotr Bielak <piotrbielak2@gmail.com>"]
+authors = ["pbielak"]
 edition = "2018"
 
 [dependencies]
@@ -10,4 +10,5 @@ futures = "0.1"
 env_logger = "0.6"
 log = "0.4"
 rand = "0.6"
+structopt = "0.2"
 time = "0.1"
