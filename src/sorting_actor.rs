@@ -48,6 +48,8 @@ impl Handler<messages::SortingRequest> for SortingActor {
 
         let (vals, duration) = util::measure_time(&|vals| self.sort_vec(vals), msg.values);
 
+        debug!("[SortingActor][{}] Done sorting - duration {} (ms)", self.id, duration);
+
         messages::SortingResponse::new(vals, duration)
     }
 }

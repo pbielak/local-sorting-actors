@@ -54,7 +54,11 @@ impl SupervisorActor {
 
         let sorted_values = tasks.into_iter().fold(vec![], |acc, task| {
             let res: messages::SortingResponse = task.wait().unwrap();
-            merge(&acc, &res.values)
+            let (merged, duration) = util::measure_time(&|v| merge(&acc, v), &res.values);
+
+            debug!("[Supervisor][{}] Merge took: {} (ms)", self.id, duration);
+
+            merged
         });
 
         sorted_values
