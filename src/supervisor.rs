@@ -123,8 +123,8 @@ fn merge(v1: &Vec<i64>, v2: &Vec<i64>) -> Vec<i64> {
     let mut i = 0;
     let mut j = 0;
 
-    let mut result: Vec<i64> = Vec::new();
     let total = v1.len() + v2.len();
+    let mut result: Vec<i64> = Vec::with_capacity(total);
 
     while result.len() != total {
         if i == v1.len() {
