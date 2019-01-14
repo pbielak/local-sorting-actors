@@ -38,8 +38,11 @@ fn run_system(args: args::CliArgs) {
             match r {
                 Ok(r) => {
                     debug!("SortingResponse[Vec[{:?}], Duration: {} (ms)]", r.values.len(), r.duration);
-                    let write_ok = util::write_numbers(output_path, &r.values).unwrap();
-                    debug!("Write ok: {:?}", write_ok);
+
+                    if output_path.to_str().unwrap() != "-" {
+                        let write_ok = util::write_numbers(output_path, &r.values).unwrap();
+                        debug!("Write ok: {:?}", write_ok);
+                    }
 
                     println!("{}", r.duration);
                 },
